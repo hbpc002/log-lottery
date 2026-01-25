@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import { PerspectiveCamera, Scene } from 'three'
 import { CSS3DObject, CSS3DRenderer } from 'three-css3d'
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
+import { createDraftPerson, generateRandomAvatar } from '@/utils'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useToast } from 'vue-toast-notification'
 import dongSound from '@/assets/audio/end.mp3'
@@ -76,6 +77,175 @@ export function useViewModel() {
 
     // 抽奖音乐相关
     const lotteryMusic = ref<HTMLAudioElement | null>(null)
+    const wsRef = ref<WebSocket | null>(null)
+
+    function addNewCardToScene(person: any) {
+        if (!scene.value)
+            return
+
+        const index = tableData.value.length
+
+        // 创建 DOM
+        const element = document.createElement('div')
+        element.className = 'element-card'
+
+        const number = document.createElement('div')
+        number.className = 'card-id'
+        number.textContent = person.uid || (index + 1).toString()
+        if (isShowAvatar.value)
+            number.style.display = 'none'
+        element.appendChild(number)
+
+        const symbol = document.createElement('div')
+        symbol.className = 'card-name'
+        symbol.textContent = person.name
+        if (isShowAvatar.value)
+            symbol.className = 'card-name card-avatar-name'
+        element.appendChild(symbol)
+
+        const detail = document.createElement('div')
+        detail.className = 'card-detail'
+        if (isShowAvatar.value)
+            detail.style.display = 'none'
+        element.appendChild(detail)
+
+        if (isShowAvatar.value) {
+            const avatar = document.createElement('img')
+            avatar.className = 'card-avatar'
+            avatar.src = person.avatar || generateRandomAvatar(person.name)
+            avatar.alt = 'avatar'
+            avatar.style.width = '140px'
+            avatar.style.height = '140px'
+            element.appendChild(avatar)
+        }
+        else {
+            const avatarEmpty = document.createElement('div')
+            avatarEmpty.style.display = 'none'
+            element.appendChild(avatarEmpty)
+        }
+
+        // Push to data
+        const personWithId = { ...person, uid: person.uid || (index + 1).toString() }
+        tableData.value.push(personWithId)
+
+        // Apply Style
+        useElementStyle({
+            element,
+            person: personWithId,
+            index,
+            patternList: patternList.value,
+            patternColor: patternColor.value,
+            cardColor: cardColor.value,
+            cardSize: cardSize.value,
+            scale: 1,
+            textSize: textSize.value,
+            mod: 'default',
+        })
+
+        const object = new CSS3DObject(element)
+        // 初始位置：屏幕外随机
+        object.position.x = Math.random() * 4000 - 2000
+        object.position.y = Math.random() * 4000 - 2000
+        object.position.z = Math.random() * 4000 - 2000
+
+        scene.value.add(object)
+        objects.value.push(object)
+
+        // 更新 targets
+        targets.table = createTableVertices({ tableData: tableData.value, rowCount: rowCount.value, cardSize: cardSize.value })
+        targets.sphere = createSphereVertices({ objectsLength: objects.value.length })
+
+        // 随机交换位置逻辑，实现"随机插入"的视觉效果
+        const newIndex = objects.value.length - 1
+        const swapIndex = Math.floor(Math.random() * (newIndex + 1))
+
+        // 如果随机到的位置不是末尾，则将原位置的卡片移到末尾 (仅交换数据结构，动画统一处理)
+        if (swapIndex !== newIndex) {
+            const oldObject = objects.value[swapIndex]
+            objects.value[swapIndex] = objects.value[newIndex] // 新卡片去随机位置
+            objects.value[newIndex] = oldObject // 旧卡片去末尾
+
+            const tempVal = tableData.value[newIndex]
+            tableData.value[newIndex] = tableData.value[swapIndex]
+            tableData.value[swapIndex] = tempVal
+        }
+
+        const getTarget = (idx: number) => {
+            if (currentStatus.value === LotteryStatus.ready || currentStatus.value === LotteryStatus.running) {
+                return targets.sphere[idx]
+            }
+            return targets.table[idx]
+        }
+
+        // 全员重新归位动画
+        // 这确保了：
+        // 1. 球体模式下，所有卡片微调位置以保持完美的球形 (Fibonacci Sphere N+1)
+        // 2. 新卡片(在 swapIndex) 从屏幕外飞向随机位置
+        // 3. 被挤走的旧卡片(在 newIndex) 从原位置飞向末尾位置
+        for (let i = 0; i < objects.value.length; i++) {
+            const obj = objects.value[i]
+            const target = getTarget(i)
+
+            if (target) {
+                new TWEEN.Tween(obj.position)
+                    .to({ x: target.position.x, y: target.position.y, z: target.position.z }, 2000)
+                    .easing(TWEEN.Easing.Exponential.InOut)
+                    .start()
+
+                new TWEEN.Tween(obj.rotation)
+                    .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, 2000)
+                    .easing(TWEEN.Easing.Exponential.InOut)
+                    .start()
+            }
+        }
+    }
+
+    function initWebSocket() {
+        try {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+            const host = window.location.host
+            const url = `${protocol}//${host}/api/ws`
+            console.log('Connecting to WebSocket:', url)
+            
+            const ws = new WebSocket(url)
+            wsRef.value = ws
+            
+            ws.onopen = () => {
+                console.log('WebSocket connection established')
+            }
+            
+            ws.onmessage = (event) => {
+                console.log('Received WS message:', event.data)
+                try {
+                    const newMsg = JSON.parse(event.data)
+                    if (newMsg && newMsg.type === 'new_person') {
+                        // 1. 保存到 Store
+                        const draft = createDraftPerson(newMsg.name, newMsg.phone)
+                        // 检查是否已存在
+                        const exists = allPersonList.value.some(p => p.phone === draft.phone)
+                        if (!exists) {
+                            personConfig.addOnePerson([draft] as any)
+                            // 2. 更新 3D 场景
+                            addNewCardToScene(draft)
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to parse WS message', e)
+                }
+            }
+            
+            ws.onerror = (e) => {
+                console.error('WebSocket error:', e)
+            }
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed, retrying in 3s...')
+                setTimeout(initWebSocket, 3000)
+            }
+        } catch (e) {
+            console.error('WebSocket init error:', e)
+        }
+    }
 
     function initThreeJs() {
         const felidView = 40
@@ -127,7 +297,8 @@ export function useViewModel() {
 
             const detail = document.createElement('div')
             detail.className = 'card-detail'
-            detail.innerHTML = `${tableData.value[i].department}<br/>${tableData.value[i].identity}`
+            // 展示姓名为主信息，部门/职位不再收集且不展示
+            detail.innerHTML = `<div>${tableData.value[i].name}</div><div class="card-phone" style="font-size:0.6em;opacity:0.8;margin-top:2px">${tableData.value[i].phone || ''}</div>`
             if (isShowAvatar.value)
                 detail.style.display = 'none'
             element.appendChild(detail)
@@ -135,7 +306,7 @@ export function useViewModel() {
             if (isShowAvatar.value) {
                 const avatar = document.createElement('img')
                 avatar.className = 'card-avatar'
-                avatar.src = tableData.value[i].avatar
+                avatar.src = tableData.value[i].avatar || generateRandomAvatar(tableData.value[i].name)
                 avatar.alt = 'avatar'
                 avatar.style.width = '140px'
                 avatar.style.height = '140px'
@@ -874,6 +1045,8 @@ export function useViewModel() {
                 randomBallData()
                 window.addEventListener('keydown', listenKeyboard)
                 isInitialDone.value = true
+                
+                initWebSocket()
             }
             else {
                 console.log('等待人员列表数据...')
@@ -891,6 +1064,9 @@ export function useViewModel() {
         nextTick(() => {
             cleanup()
         })
+        if (wsRef.value) {
+            wsRef.value.close()
+        }
         clearInterval(intervalTimer.value)
         intervalTimer.value = null
         window.removeEventListener('keydown', listenKeyboard)

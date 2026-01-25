@@ -150,6 +150,15 @@ const routes = [
                 },
                 component: () => import('@/views/Mobile/index.vue'),
             },
+            {
+                path: '/log-lottery/register',
+                name: 'Register',
+                component: () => import('@/views/Register/index.vue'),
+                meta: {
+                    isMobile: true,
+                    title: 'Register',
+                },
+            },
             configRoutes,
         ],
     },

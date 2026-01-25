@@ -91,9 +91,10 @@ export default defineConfig(({ mode }) => {
         },
         clearScreen: false,
         server: {
-            host: 'localhost',
+            host: true,
             port: 6719,
             strictPort: true,
+            allowedHosts: ["6719.app.cloudstudio.work", "5173.app.cloudstudio.work"],
             watch: {
                 // 告诉 Vite 忽略监听 `src-tauri` 目录
                 ignored: ['**/src-tauri/**'],
@@ -105,6 +106,7 @@ export default defineConfig(({ mode }) => {
                     changeOrigin: true,
                     // 路径重写
                     rewrite: path => path.replace(/^\/api/, '/api'),
+                    ws: true,
                 },
             },
         },

@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid'
  * @param localRowCount 每一行有多少个元素
  * @returns 处理后的表格数据
  */
+export * from './personDraft'
+
 export function filterData(tableData: any[], localRowCount: number) {
     const dataLength = tableData.length
     let j = 0

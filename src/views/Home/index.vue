@@ -6,6 +6,8 @@ import OptionButton from './components/OptionsButton/index.vue'
 import PrizeList from './components/PrizeList/index.vue'
 import StarsBackground from './components/StarsBackground/index.vue'
 import { useViewModel } from './useViewModel'
+import QRCode from './components/QRCode/index.vue'
+import { computed } from 'vue'
 import 'vue-toast-notification/dist/theme-sugar.css'
 
 const viewModel = useViewModel()
@@ -13,6 +15,8 @@ const { setDefaultPersonList, tableData, currentStatus, enterLottery, stopLotter
 const globalConfig = useStore().globalConfig
 
 const { getTopTitle: topTitle, getTextColor: textColor, getTextSize: textSize, getBackground: homeBackground } = storeToRefs(globalConfig)
+const { getAllPersonList } = storeToRefs(useStore().personConfig)
+const totalParticipants = computed(() => getAllPersonList.value.length)
 </script>
 
 <template>
@@ -39,6 +43,7 @@ const { getTopTitle: topTitle, getTextColor: textColor, getTextSize: textSize, g
   </div>
   <StarsBackground :home-background="homeBackground" />
   <PrizeList class="absolute left-0 top-32" />
+  <QRCode class="absolute top-0 right-0 m-4" :total-participants="totalParticipants" />
 </template>
 
 <style scoped lang="scss">

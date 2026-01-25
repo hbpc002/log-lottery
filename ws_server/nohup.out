@@ -1,0 +1,16 @@
+warning: associated function `ok_with_data` is never used
+  --> src/main.rs:19:8
+   |
+18 | impl<T> ApiResponse<T> {
+   | ---------------------- associated function in this implementation
+19 |     fn ok_with_data(data: T, msg: String) -> Self {
+   |        ^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `ws_server` (bin "ws_server") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.09s
+     Running `target/debug/ws_server`
+报名已接收并广播: 申通 / 18554542121
+报名已接收并广播: 六个 / 15255555555
+报名已接收并广播: 玨凸上 / 15233333333

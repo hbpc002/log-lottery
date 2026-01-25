@@ -10,7 +10,8 @@ import { usePrizeConfig } from './prizeConfig'
 // 获取IPersonConfig的key组成数组
 export const personListKey = Object.keys(defaultPersonList[0])
 export const usePersonConfig = defineStore('person', () => {
-    const personDb = new IndexDb('person', ['allPersonList', 'alreadyPersonList'], 1, ['createTime'])
+    // include phone for storing participant phone numbers
+    const personDb = new IndexDb('person', ['allPersonList', 'alreadyPersonList'], 1, ['phone', 'createTime'])
     // NOTE: state
     const personConfig = ref({
         allPersonList: [] as IPersonConfig[],

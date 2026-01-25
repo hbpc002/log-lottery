@@ -61,11 +61,21 @@ export function useElementStyle(props: IUseElementStyle) {
     }
 
     element.children[2].style.fontSize = `${textSize * scale * 0.5}px`
-    // 设置部门和身份的默认值
+    // 设置详情（包含手机号）
     element.children[2].innerHTML = ''
+    let detailHtml = ''
+    // 如果有部门或身份
     if (person.department || person.identity) {
-        element.children[2].innerHTML = `${person.department ? person.department : ''}<br/>${person.identity ? person.identity : ''}`
+        detailHtml += `${person.department || ''} ${person.identity || ''}`
     }
+    // 如果有手机号
+    if (person.phone) {
+        if (detailHtml)
+            detailHtml += '<br/>'
+        detailHtml += `<span class="card-phone" style="font-size:0.85em;opacity:0.9;font-weight:bold">${person.phone}</span>`
+    }
+    element.children[2].innerHTML = detailHtml
+
     element.children[3].src = person.avatar
     return element
 }
