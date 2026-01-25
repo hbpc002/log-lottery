@@ -1,4 +1,4 @@
-export interface IPersonConfig {
+ export interface IPersonConfig {
     id: number
     uid: string
     uuid: string
@@ -14,6 +14,7 @@ export interface IPersonConfig {
     prizeName: string[]
     prizeId: string[]
     prizeTime: string[]
+    phone?: string
 }
 export interface Separate {
     id: string

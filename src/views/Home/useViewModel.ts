@@ -127,7 +127,8 @@ export function useViewModel() {
 
             const detail = document.createElement('div')
             detail.className = 'card-detail'
-            detail.innerHTML = `${tableData.value[i].department}<br/>${tableData.value[i].identity}`
+            // 展示姓名为主信息，部门/职位不再收集且不展示
+            detail.innerHTML = `${tableData.value[i].name}`
             if (isShowAvatar.value)
                 detail.style.display = 'none'
             element.appendChild(detail)
