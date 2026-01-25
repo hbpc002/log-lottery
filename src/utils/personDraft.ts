@@ -23,7 +23,6 @@ export function generateRandomAvatar(name: string): string {
   // 处理中文编码问题
   return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 }
-
 export function createDraftPerson(name: string, phone?: string): IPersonConfig {
   const now = dayjs().format('YYYY-MM-DD HH:mm:ss')
   const id = Date.now()
