@@ -1,42 +1,88 @@
-# 使用更小的 Node 镜像作为构建基础镜像
-FROM node:22-alpine as builder
+# 多阶段构建 - 前端构建
+FROM node:22-alpine as frontend-builder
 
-# 设置工作目录
-WORKDIR /usr/src/app
+WORKDIR /usr/src/app/frontend
+COPY package.json pnpm-lock.yaml ./
+COPY tsconfig.json vite.config.ts ./
+COPY index.html ./
+COPY src ./src
+COPY public ./public
+COPY static ./static
 
-# 将本地的项目文件复制到工作目录
-COPY . .
-
-# 安装 pnpm
-RUN npm install pnpm -g
-
-# 安装依赖
-RUN pnpm install
-
-# 执行构建命令，生成 dist 目录
+RUN npm install -g pnpm
+RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
-# 使用 Nginx 镜像作为运行时镜像
-FROM nginx:1.26
+# Rust 后端构建
+FROM rust:1.75-alpine as backend-builder
 
-# 复制自定义 nginx 配置
-COPY --from=0 /usr/src/app/dist /usr/share/nginx/html/log-lottery
+RUN apk add --no-cache musl-dev
 
-# 创建自定义 nginx 配置
-RUN echo "server {\
-    listen 80;\
-    server_name localhost;\
-    location / {\
-        return 301 /log-lottery/;\
-    }\
-    location /log-lottery {\
-        alias /usr/share/nginx/html/log-lottery;\
-        index index.html index.htm;\
-        try_files \$uri \$uri/ /log-lottery/index.html;\
-    }\
-}" > /etc/nginx/conf.d/default.conf
+WORKDIR /usr/src/app/backend
+COPY ws_server/Cargo.toml ws_server/Cargo.lock ./ws_server/
+COPY ws_server/src ./ws_server/src
 
-# 暴露容器的 80 端口
+RUN cargo build --release --manifest-path=ws_server/Cargo.toml
+
+# 运行时镜像
+FROM nginx:1.26-alpine as runtime
+
+# 安装 socat 用于支持 WebSocket
+RUN apk add --no-cache socat
+
+# 复制前端文件
+COPY --from=frontend-builder /usr/src/app/frontend/dist /usr/share/nginx/html
+
+# 复制后端二进制文件
+COPY --from=backend-builder /usr/src/app/backend/ws_server/target/release/ws_server /usr/local/bin/ws_server
+
+# 创建 nginx 配置
+RUN tee /etc/nginx/conf.d/default.conf > /dev/null <<'EOL'
+server {
+    listen 80;
+    server_name localhost;
+    
+    # 前端静态文件
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+    
+    # API 代理到后端
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # WebSocket 支持
+    location /ws {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOL
+
+# 创建启动脚本
+RUN tee /start.sh > /dev/null <<'EOL'
+#!/bin/sh
+# 启动后端服务
+ws_server &
+# 启动 nginx
+nginx -g 'daemon off;'
+EOL
+
+RUN chmod +x /start.sh
+
 EXPOSE 80
 
-# Nginx 会在容器启动时自动运行，无需手动设置 CMD
+CMD ["/start.sh"]

@@ -9,6 +9,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "build:pre": "vue-tsc --noEmit && vite build --mode prebuild",
     "build:file": "vue-tsc --noEmit && vite build --mode file",
+    "vercel-build": "vue-tsc --noEmit && vite build && cd ws_server && cargo build --release",
     "tauri": "node ./build/syncVersion.js && tauri",
     "update-version": "node ./build/updateVersion.js",
     "test": "vitest",
