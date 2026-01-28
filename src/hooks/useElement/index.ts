@@ -18,18 +18,22 @@ interface IUseElementStyle {
 export function useElementStyle(props: IUseElementStyle) {
     const { element, person, index, patternList, patternColor, cardColor, cardSize, scale, textSize, mod, type } = props
     if (patternList.includes(index + 1) && mod === 'default') {
-        element.style.backgroundColor = rgba(patternColor, Math.random() * 0.2 + 0.8)
+        element.style.background = `linear-gradient(135deg, ${rgba(patternColor, 0.9)} 0%, ${rgba(patternColor, 0.7)} 50%, ${rgba(patternColor, 0.8)} 100%)`
     }
     else if (mod === 'sphere' || mod === 'default') {
-        element.style.backgroundColor = rgba(cardColor, Math.random() * 0.5 + 0.25)
+        // 统一使用红包样式，忽略随机性
+        element.style.background = 'linear-gradient(135deg, #ff4b4b 0%, #e63946 50%, #d62828 100%)'
     }
     else if (mod === 'lucky') {
         element.style.backgroundColor = rgba(cardColor, 0.8)
     }
     element.style.border = `1px solid ${rgba(cardColor, 0.25)}`
-    element.style.boxShadow = `0 0 12px ${rgba(cardColor, 0.5)}`
+    element.style.boxShadow = `0 8px 16px rgba(214, 40, 40, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)`
     element.style.width = `${cardSize.width * scale}px`
     element.style.height = `${cardSize.height * scale}px`
+    element.style.borderRadius = '12px'
+    element.style.overflow = 'hidden'
+    
     if (mod === 'lucky') {
         element.className = 'lucky-element-card'
     }
@@ -61,17 +65,11 @@ export function useElementStyle(props: IUseElementStyle) {
     }
 
     element.children[2].style.fontSize = `${textSize * scale * 0.5}px`
-    // 设置详情（包含手机号）
+    // 设置详情（只显示手机号）
     element.children[2].innerHTML = ''
     let detailHtml = ''
-    // 如果有部门或身份
-    if (person.department || person.identity) {
-        detailHtml += `${person.department || ''} ${person.identity || ''}`
-    }
     // 如果有手机号
     if (person.phone) {
-        if (detailHtml)
-            detailHtml += '<br/>'
         detailHtml += `<span class="card-phone" style="font-size:0.85em;opacity:0.9;font-weight:bold">${person.phone}</span>`
     }
     element.children[2].innerHTML = detailHtml

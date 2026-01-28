@@ -6,8 +6,7 @@ import { storeToRefs } from 'pinia'
 import { PerspectiveCamera, Scene } from 'three'
 import { CSS3DObject, CSS3DRenderer } from 'three-css3d'
 import { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
-import { createDraftPerson, generateRandomAvatar } from '@/utils'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useToast } from 'vue-toast-notification'
 import dongSound from '@/assets/audio/end.mp3'
 import enterAudio from '@/assets/audio/enter.wav'
@@ -16,7 +15,7 @@ import { SINGLE_TIME_MAX_PERSON_COUNT } from '@/constant/config'
 import { useElementPosition, useElementStyle } from '@/hooks/useElement'
 import i18n from '@/locales/i18n'
 import useStore from '@/store'
-import { selectCard } from '@/utils'
+import { createDraftPerson, generateRandomAvatar, selectCard } from '@/utils'
 import { rgba } from '@/utils/color'
 import { LotteryStatus } from './type'
 import { confettiFire, createSphereVertices, createTableVertices, getRandomElements, initTableData } from './utils'
@@ -92,8 +91,8 @@ export function useViewModel() {
         const number = document.createElement('div')
         number.className = 'card-id'
         number.textContent = person.uid || (index + 1).toString()
-        if (isShowAvatar.value)
-            number.style.display = 'none'
+        // Always hide the ID element to show only name and phone
+        number.style.display = 'none'
         element.appendChild(number)
 
         const symbol = document.createElement('div')
@@ -143,10 +142,6 @@ export function useViewModel() {
         })
 
         const object = new CSS3DObject(element)
-        // 初始位置：屏幕外随机
-        object.position.x = Math.random() * 4000 - 2000
-        object.position.y = Math.random() * 4000 - 2000
-        object.position.z = Math.random() * 4000 - 2000
 
         scene.value.add(object)
         objects.value.push(object)
@@ -155,20 +150,46 @@ export function useViewModel() {
         targets.table = createTableVertices({ tableData: tableData.value, rowCount: rowCount.value, cardSize: cardSize.value })
         targets.sphere = createSphereVertices({ objectsLength: objects.value.length })
 
-        // 随机交换位置逻辑，实现"随机插入"的视觉效果
+        // 找到不在patternList中的位置，保护2026图案
         const newIndex = objects.value.length - 1
-        const swapIndex = Math.floor(Math.random() * (newIndex + 1))
+        let swapIndex = newIndex // 默认不加到最后
+        
+        // 只在平铺模式下保护图案，球体模式下允许随机
+        if (currentStatus.value === LotteryStatus.init) {
+            // 找到第一个不在patternList中的位置
+            let foundSlot = false
+            // 优先在当前布局内寻找空位
+            for (let i = 0; i < newIndex; i++) {
+                if (!patternList.value.includes(i + 1)) {
+                    swapIndex = i
+                    foundSlot = true
+                    break
+                }
+            }
+            
+            // 如果没找到，将卡片添加到末尾，并更新布局
+            if (!foundSlot) {
+                // 更新targets.table以包含新位置
+                targets.table = createTableVertices({ tableData: tableData.value, rowCount: rowCount.value, cardSize: cardSize.value })
+            }
+        } else {
+            // 球体模式下随机交换
+            swapIndex = Math.floor(Math.random() * (newIndex + 1))
+        }
 
-        // 如果随机到的位置不是末尾，则将原位置的卡片移到末尾 (仅交换数据结构，动画统一处理)
+        // 如果找到的位置不是末尾，则交换位置
         if (swapIndex !== newIndex) {
             const oldObject = objects.value[swapIndex]
-            objects.value[swapIndex] = objects.value[newIndex] // 新卡片去随机位置
+            objects.value[swapIndex] = objects.value[newIndex] // 新卡片去找到的位置
             objects.value[newIndex] = oldObject // 旧卡片去末尾
 
             const tempVal = tableData.value[newIndex]
             tableData.value[newIndex] = tableData.value[swapIndex]
             tableData.value[swapIndex] = tempVal
         }
+        
+        // 更新最终索引：如果发生了交换，新卡片的实际位置是swapIndex
+        const finalNewIndex = swapIndex
 
         const getTarget = (idx: number) => {
             if (currentStatus.value === LotteryStatus.ready || currentStatus.value === LotteryStatus.running) {
@@ -177,25 +198,81 @@ export function useViewModel() {
             return targets.table[idx]
         }
 
+        // 为新添加的卡片设置初始位置，根据当前视图模式
+
+        // 设置新卡片的初始位置 (从屏幕外飞入)
+        const targetForNewCard = getTarget(swapIndex)
+        if (targetForNewCard) {
+            // 平铺模式下，从右侧飞入
+            if (currentStatus.value === LotteryStatus.init) {
+                object.position.x = targetForNewCard.position.x + 2000
+                object.position.y = targetForNewCard.position.y
+                object.position.z = targetForNewCard.position.z
+            } else {
+                // 球体模式下，从屏幕外飞入
+                object.position.x = targetForNewCard.position.x + (Math.random() - 0.5) * 3000
+                object.position.y = targetForNewCard.position.y + (Math.random() - 0.5) * 3000
+                object.position.z = targetForNewCard.position.z + (Math.random() - 0.5) * 3000
+            }
+        }
+        else {
+            // 如果没有目标位置，使用随机位置
+            object.position.x = Math.random() * 4000 - 2000
+            object.position.y = Math.random() * 4000 - 2000
+            object.position.z = Math.random() * 4000 - 2000
+        }
+
         // 全员重新归位动画
         // 这确保了：
         // 1. 球体模式下，所有卡片微调位置以保持完美的球形 (Fibonacci Sphere N+1)
-        // 2. 新卡片(在 swapIndex) 从屏幕外飞向随机位置
-        // 3. 被挤走的旧卡片(在 newIndex) 从原位置飞向末尾位置
+        // 2. 新卡片(在 finalNewIndex) 从屏幕外飞向目标位置
+        // 3. 其他卡片移动到新分配的位置
         for (let i = 0; i < objects.value.length; i++) {
             const obj = objects.value[i]
             const target = getTarget(i)
 
             if (target) {
-                new TWEEN.Tween(obj.position)
-                    .to({ x: target.position.x, y: target.position.y, z: target.position.z }, 2000)
-                    .easing(TWEEN.Easing.Exponential.InOut)
-                    .start()
+                // 为新卡片设置更自然的飞入动画
+                const animationDuration = currentStatus.value === LotteryStatus.init ? 800 : 2000
+                if (i === swapIndex) { // 当前对象是新添加的卡片
+                    // 新卡片从初始位置飞到目标位置
+                    new TWEEN.Tween(obj.position)
+                        .to({ x: target.position.x, y: target.position.y, z: target.position.z }, animationDuration)
+                        .easing(TWEEN.Easing.Exponential.InOut)
+                        .start()
 
-                new TWEEN.Tween(obj.rotation)
-                    .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, 2000)
-                    .easing(TWEEN.Easing.Exponential.InOut)
-                    .start()
+                    new TWEEN.Tween(obj.rotation)
+                        .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, animationDuration)
+                        .easing(TWEEN.Easing.Exponential.InOut)
+                        .start()
+                        .onComplete(() => {
+                            // 如果是平铺模式，重新应用所有pattern样式
+                            if (currentStatus.value === LotteryStatus.init && patternList.value.length) {
+                                setTimeout(() => {
+                                    for (let j = 0; j < patternList.value.length; j++) {
+                                        if (j < rowCount.value * 7) {
+                                            const patternIndex = patternList.value[j] - 1
+                                            if (objects.value[patternIndex]) {
+                                                objects.value[patternIndex].element.style.background = `linear-gradient(135deg, ${rgba(patternColor.value, 0.9)} 0%, ${rgba(patternColor.value, 0.7)} 50%, ${rgba(patternColor.value, 0.8)} 100%)`
+                                            }
+                                        }
+                                    }
+                                }, 100)
+                            }
+                        })
+                }
+                else {
+                    // 现有卡片移动到新位置
+                    new TWEEN.Tween(obj.position)
+                        .to({ x: target.position.x, y: target.position.y, z: target.position.z }, animationDuration)
+                        .easing(TWEEN.Easing.Exponential.InOut)
+                        .start()
+
+                    new TWEEN.Tween(obj.rotation)
+                        .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, animationDuration)
+                        .easing(TWEEN.Easing.Exponential.InOut)
+                        .start()
+                }
             }
         }
     }
@@ -206,14 +283,14 @@ export function useViewModel() {
             const host = window.location.host
             const url = `${protocol}//${host}/api/ws`
             console.log('Connecting to WebSocket:', url)
-            
+
             const ws = new WebSocket(url)
             wsRef.value = ws
-            
+
             ws.onopen = () => {
                 console.log('WebSocket connection established')
             }
-            
+
             ws.onmessage = (event) => {
                 console.log('Received WS message:', event.data)
                 try {
@@ -229,20 +306,22 @@ export function useViewModel() {
                             addNewCardToScene(draft)
                         }
                     }
-                } catch (e) {
+                }
+                catch (e) {
                     console.error('Failed to parse WS message', e)
                 }
             }
-            
+
             ws.onerror = (e) => {
                 console.error('WebSocket error:', e)
             }
-            
+
             ws.onclose = () => {
                 console.log('WebSocket closed, retrying in 3s...')
                 setTimeout(initWebSocket, 3000)
             }
-        } catch (e) {
+        }
+        catch (e) {
             console.error('WebSocket init error:', e)
         }
     }
@@ -284,8 +363,8 @@ export function useViewModel() {
             const number = document.createElement('div')
             number.className = 'card-id'
             number.textContent = tableData.value[i].uid
-            if (isShowAvatar.value)
-                number.style.display = 'none'
+            // Always hide the ID element to show only name and phone
+            number.style.display = 'none'
             element.appendChild(number)
 
             const symbol = document.createElement('div')
@@ -298,7 +377,7 @@ export function useViewModel() {
             const detail = document.createElement('div')
             detail.className = 'card-detail'
             // 展示姓名为主信息，部门/职位不再收集且不展示
-            detail.innerHTML = `<div>${tableData.value[i].name}</div><div class="card-phone" style="font-size:0.6em;opacity:0.8;margin-top:2px">${tableData.value[i].phone || ''}</div>`
+            detail.innerHTML = `<div class="card-phone" style="font-size:0.6em;opacity:0.8;margin-top:2px">${tableData.value[i].phone || ''}</div>`
             if (isShowAvatar.value)
                 detail.style.display = 'none'
             element.appendChild(detail)
@@ -346,7 +425,7 @@ export function useViewModel() {
         const sphereVertices = createSphereVertices({ objectsLength: objects.value.length })
         targets.sphere = sphereVertices
         window.addEventListener('resize', onWindowResize, false)
-        transform(targets.table, 1000)
+transform(targets.table, 1000, 'table')
         render()
     }
     function render() {
@@ -359,7 +438,7 @@ export function useViewModel() {
      * @param targets 目标位置
      * @param duration 持续时间
      */
-    function transform(targets: any[], duration: number) {
+    function transform(targets: any[], duration: number, targetMode: 'table' | 'sphere' = 'sphere') {
         TWEEN.removeAll()
         if (intervalTimer.value) {
             clearInterval(intervalTimer.value)
@@ -377,10 +456,37 @@ export function useViewModel() {
                     .easing(TWEEN.Easing.Exponential.InOut)
                     .start()
 
+                // 如果是平铺布局，确保旋转为0；如果是球体布局，使用目标旋转
+                const rotationTween = targetMode === 'table' 
+                    ? { x: 0, y: 0, z: 0 }
+                    : { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }
+                    
                 new TWEEN.Tween(object.rotation)
-                    .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration)
+                    .to(rotationTween, Math.random() * duration + duration)
                     .easing(TWEEN.Easing.Exponential.InOut)
                     .start()
+                    .onComplete(() => {
+                        if (luckyCardList.value.length && targetMode === 'sphere') {
+                            luckyCardList.value.forEach((cardIndex: any) => {
+                                const item = objects.value[cardIndex]
+                                useElementStyle({
+                                    element: item.element,
+                                    person: {} as any,
+                                    index: i,
+                                    patternList: patternList.value,
+                                    patternColor: patternColor.value,
+                                    cardColor: cardColor.value,
+                                    cardSize: cardSize.value,
+                                    scale: 1,
+                                    textSize: textSize.value,
+                                    mod: 'sphere',
+                                })
+                            })
+                        }
+                        luckyTargets.value = []
+                        luckyCardList.value = []
+                        canOperate.value = true
+                    })
                     .onComplete(() => {
                         if (luckyCardList.value.length) {
                             luckyCardList.value.forEach((cardIndex: any) => {
@@ -641,13 +747,15 @@ export function useViewModel() {
         if (patternList.value.length) {
             for (let i = 0; i < patternList.value.length; i++) {
                 if (i < rowCount.value * 7) {
-                    objects.value[patternList.value[i] - 1].element.style.backgroundColor = rgba(cardColor.value, Math.random() * 0.5 + 0.25)
+                    // 统一红包样式，不再使用随机颜色
+                    objects.value[patternList.value[i] - 1].element.style.background = 'linear-gradient(135deg, #ff4b4b 0%, #e63946 50%, #d62828 100%)'
                 }
             }
         }
         canOperate.value = false
-        await transform(targets.sphere, 1000)
+        await transform(targets.sphere, 1000, 'sphere')
         currentStatus.value = LotteryStatus.ready
+        window.lotteryStatus = LotteryStatus.ready
         rollBall(0.1, 2000)
     }
     /**
@@ -717,6 +825,7 @@ export function useViewModel() {
         startLotteryMusic()
 
         currentStatus.value = LotteryStatus.running
+        window.lotteryStatus = LotteryStatus.running
         rollBall(10, 3000)
         if (definiteTime.value) {
             setTimeout(() => {
@@ -783,6 +892,7 @@ export function useViewModel() {
                 .onComplete(() => {
                     canOperate.value = true
                     currentStatus.value = LotteryStatus.end
+                    window.lotteryStatus = LotteryStatus.end
                 })
             new TWEEN.Tween(item.rotation)
                 .to({
@@ -879,6 +989,7 @@ export function useViewModel() {
 
         enterLottery()
         currentStatus.value = LotteryStatus.init
+        window.lotteryStatus = LotteryStatus.init
     }
 
     /**
@@ -1045,7 +1156,7 @@ export function useViewModel() {
                 randomBallData()
                 window.addEventListener('keydown', listenKeyboard)
                 isInitialDone.value = true
-                
+
                 initWebSocket()
             }
             else {
@@ -1057,20 +1168,96 @@ export function useViewModel() {
 
         checkAndInit()
     }
-    onMounted(() => {
-        init()
+onMounted(() => {
+    init()
+    // 将返回平铺函数注册到全局window对象
+    console.log('Registering backToTableFunction on window')
+    ;(window).backToTableFunction = backToTable
+    console.log('backToTableFunction registered:', typeof (window).backToTableFunction)
+    
+    // 监听backToTable事件
+    ;(window).backToTableEventHandle = () => {
+        backToTable()
+    }
+    window.addEventListener('backToTable', window.backToTableEventHandle)
+    
+    // 初始化状态
+    window.lotteryStatus = currentStatus.value
+})
+
+// 监听状态变化
+watch(currentStatus, (newStatus: LotteryStatus) => {
+    ;(window).lotteryStatus = newStatus
+    console.log('LotteryStatus changed to:', newStatus)
+    // 触发自定义事件，通知RightButton更新
+    window.dispatchEvent(new CustomEvent('lotteryStatusChanged', { detail: { status: newStatus } }))
+})
+onUnmounted(() => {
+    nextTick(() => {
+        cleanup()
     })
-    onUnmounted(() => {
-        nextTick(() => {
-            cleanup()
-        })
-        if (wsRef.value) {
-            wsRef.value.close()
+    if (wsRef.value) {
+        wsRef.value.close()
+    }
+    clearInterval(intervalTimer.value)
+    intervalTimer.value = null
+    window.removeEventListener('keydown', listenKeyboard)
+    // 清理全局函数和事件监听
+    delete (window).backToTableFunction
+    if (window.backToTableEventHandle) {
+        window.removeEventListener('backToTable', window.backToTableEventHandle)
+        delete window.backToTableEventHandle
+    }
+})
+
+    /**
+     * @description: 从球体状态切换回平铺状态
+     */
+    async function backToTable() {
+        if (!canOperate.value) {
+            return
         }
-        clearInterval(intervalTimer.value)
-        intervalTimer.value = null
-        window.removeEventListener('keydown', listenKeyboard)
-    })
+        // 停止抽奖音乐
+        stopLotteryMusic()
+        
+        // 清理定时器
+        if (intervalTimer.value) {
+            clearInterval(intervalTimer.value)
+            intervalTimer.value = null
+        }
+        
+        canOperate.value = false
+        
+        // 重置场景旋转
+        new TWEEN.Tween(scene.value.rotation)
+            .to({
+                x: 0,
+                y: 0,
+                z: 0,
+            }, 800)
+            .easing(TWEEN.Easing.Exponential.InOut)
+            .onUpdate(render)
+            .start()
+        
+        await transform(targets.table, 1000, 'table')
+        currentStatus.value = LotteryStatus.init
+        window.lotteryStatus = LotteryStatus.init
+        
+        // 恢复2026字样
+        if (patternList.value.length) {
+            for (let i = 0; i < patternList.value.length; i++) {
+                if (i < rowCount.value * 7) {
+                    const index = patternList.value[i] - 1
+                    if (objects.value[index]) {
+                        objects.value[index].element.style.background = `linear-gradient(135deg, ${rgba(patternColor.value, 0.9)} 0%, ${rgba(patternColor.value, 0.7)} 50%, ${rgba(patternColor.value, 0.8)} 100%)`
+                    }
+                }
+            }
+        }
+        
+        // 重置相机视角
+        resetCamera()
+    }
 
     return {
         setDefaultPersonList,
@@ -1085,5 +1272,6 @@ export function useViewModel() {
         isInitialDone,
         titleFont,
         titleFontSyncGlobal,
+        backToTable,
     }
 }

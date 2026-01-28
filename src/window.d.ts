@@ -9,4 +9,7 @@ interface FontData {
 
 interface Window {
     queryLocalFonts?: (options?) => Promise<FontData[]>
+    lotteryStatus?: 0 | 1 | 2 | 3
+    backToTableFunction?: () => void
+    backToTableEventHandle?: () => void
 }
