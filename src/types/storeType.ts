@@ -1,4 +1,4 @@
- export interface IPersonConfig {
+export interface IPersonConfig {
     id: number
     uid: string
     uuid: string

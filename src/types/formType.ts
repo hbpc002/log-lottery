@@ -1,4 +1,4 @@
 export interface IPersonSubmission {
-  name: string
-  phone: string
+    name: string
+    phone: string
 }
