@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Rust 后端构建
-FROM rust:1.82 as backend-builder
+FROM rust:1.85 as backend-builder
 
 # 安装必要的构建工具
 RUN apt-get update && apt-get install -y \
