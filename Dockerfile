@@ -1,6 +1,9 @@
 # 多阶段构建 - 前端构建
 FROM node:22-alpine as frontend-builder
 
+# 安装必要的构建工具
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /usr/src/app/frontend
 COPY package.json pnpm-lock.yaml ./
 COPY tsconfig.json vite.config.ts ./
