@@ -19,7 +19,7 @@ RUN pnpm build
 # Rust 后端构建
 FROM rust:latest as backend-builder
 
-WORKDIR /usr/src/app/backend
+WORKDIR /usr/src/app
 COPY ws_server/Cargo.toml ./ws_server/
 COPY ws_server/src ./ws_server/src
 
@@ -35,7 +35,10 @@ RUN apk add --no-cache socat
 COPY --from=frontend-builder /usr/src/app/frontend/dist /usr/share/nginx/html
 
 # 复制后端二进制文件
-COPY --from=backend-builder /usr/src/app/backend/ws_server/target/release/ws_server /usr/local/bin/ws_server
+COPY --from=backend-builder /usr/src/app/ws_server/target/release/ws_server /usr/local/bin/ws_server
+
+# 添加调试信息
+RUN ls -la /usr/local/bin/ && file /usr/local/bin/ws_server || echo "ws_server 文件不存在"
 
 # 创建启动脚本（动态生成Nginx配置）
 RUN tee /start.sh > /dev/null <<'EOL'
@@ -56,28 +59,32 @@ server {
     # API 代理到后端
     location /api/ {
         proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
     
     # WebSocket 支持
     location /ws {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
 EOF
 
 # 启动后端服务
-ws_server &
+if [ -f "/usr/local/bin/ws_server" ]; then
+    /usr/local/bin/ws_server &
+else
+    echo "警告: ws_server 二进制文件不存在，仅启动 Nginx"
+fi
 # 启动 nginx
 nginx -g 'daemon off;'
 EOL
