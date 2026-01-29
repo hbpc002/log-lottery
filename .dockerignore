@@ -12,8 +12,6 @@ build
 .DS_Store
 coverage
 .target
-tsconfig*.json
-vite.config.ts
 *.test.*
 eslint.config.js
 Dockerfile

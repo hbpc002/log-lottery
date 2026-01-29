@@ -36,10 +36,13 @@ COPY --from=frontend-builder /usr/src/app/frontend/dist /usr/share/nginx/html
 # 复制后端二进制文件
 COPY --from=backend-builder /usr/src/app/backend/ws_server/target/release/ws_server /usr/local/bin/ws_server
 
-# 创建 nginx 配置
-RUN tee /etc/nginx/conf.d/default.conf > /dev/null <<'EOL'
+# 创建启动脚本（动态生成Nginx配置）
+RUN tee /start.sh > /dev/null <<'EOL'
+#!/bin/sh
+# 动态生成Nginx配置，使用Render的PORT环境变量
+cat > /etc/nginx/conf.d/default.conf <<EOF
 server {
-    listen 80;
+    listen ${PORT:-80};
     server_name localhost;
     
     # 前端静态文件
@@ -70,11 +73,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-EOL
+EOF
 
-# 创建启动脚本
-RUN tee /start.sh > /dev/null <<'EOL'
-#!/bin/sh
 # 启动后端服务
 ws_server &
 # 启动 nginx
@@ -83,6 +83,5 @@ EOL
 
 RUN chmod +x /start.sh
 
-EXPOSE 80
-
+# 不再EXPOSE固定端口，让Render控制
 CMD ["/start.sh"]

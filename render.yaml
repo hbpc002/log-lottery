@@ -1,0 +1,11 @@
+version: "1"
+services:
+  - type: web
+    name: log-lottery
+    env: docker
+    region: oregon
+    plan: free
+    healthCheckPath: /log-lottery/
+    envVars:
+      - key: NODE_ENV
+        value: production
