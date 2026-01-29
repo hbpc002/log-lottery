@@ -58,9 +58,29 @@ server {
         try_files \$uri \$uri/ /index.html;
     }
     
-    # 前端静态资源 - 匹配 /log-lottery/js, /log-lottery/css 等
-    location /log-lottery/ {
-        alias /usr/share/nginx/html/;
+    # 前端静态资源 - 匹配特定目录
+    location /log-lottery/js/ {
+        alias /usr/share/nginx/html/js/;
+    }
+    
+    location /log-lottery/css/ {
+        alias /usr/share/nginx/html/css/;
+    }
+    
+    location /log-lottery/assets/ {
+        alias /usr/share/nginx/html/assets/;
+    }
+    
+    location /log-lottery/png/ {
+        alias /usr/share/nginx/html/png/;
+    }
+    
+    location /log-lottery/mp3/ {
+        alias /usr/share/nginx/html/mp3/;
+    }
+    
+    location /log-lottery/wav/ {
+        alias /usr/share/nginx/html/wav/;
     }
     
     # 暂时禁用API路由
