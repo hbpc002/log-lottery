@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Rust 后端构建
-FROM rust:1.80 as backend-builder
+FROM rust:1.82 as backend-builder
 
 # 安装必要的构建工具
 RUN apt-get update && apt-get install -y \
@@ -26,10 +26,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app/backend
-COPY ws_server/Cargo.toml ws_server/Cargo.lock ./ws_server/
+COPY ws_server/Cargo.toml ./ws_server/
 COPY ws_server/src ./ws_server/src
 
-RUN cargo build --release --manifest-path=ws_server/Cargo.toml
+RUN cd ws_server && cargo build --release
 
 # 运行时镜像
 FROM nginx:1.26-alpine as runtime
