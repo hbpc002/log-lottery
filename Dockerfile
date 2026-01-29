@@ -14,9 +14,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Rust 后端构建
-FROM rust:1.75-alpine as backend-builder
-
-RUN apk add --no-cache musl-dev
+FROM rust:1.75 as backend-builder
 
 WORKDIR /usr/src/app/backend
 COPY ws_server/Cargo.toml ws_server/Cargo.lock ./ws_server/
