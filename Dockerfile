@@ -6,7 +6,7 @@ RUN apk add --no-cache python3 make g++
 
 WORKDIR /usr/src/app/frontend
 COPY package.json pnpm-lock.yaml ./
-COPY tsconfig.json vite.config.ts ./
+COPY tsconfig.json tsconfig.node.json vite.config.ts ./
 COPY index.html ./
 COPY src ./src
 COPY public ./public
@@ -17,7 +17,13 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Rust 后端构建
-FROM rust:1.75 as backend-builder
+FROM rust:1.80 as backend-builder
+
+# 安装必要的构建工具
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app/backend
 COPY ws_server/Cargo.toml ws_server/Cargo.lock ./ws_server/
