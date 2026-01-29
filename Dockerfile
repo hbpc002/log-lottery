@@ -17,13 +17,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # Rust 后端构建
-FROM rust:1.85 as backend-builder
-
-# 安装必要的构建工具
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+FROM rust:latest as backend-builder
 
 WORKDIR /usr/src/app/backend
 COPY ws_server/Cargo.toml ./ws_server/
