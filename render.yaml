@@ -5,7 +5,7 @@ services:
     env: docker
     region: oregon
     plan: free
-    healthCheckPath: /log-lottery/
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production

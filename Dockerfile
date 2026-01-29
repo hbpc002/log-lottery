@@ -46,51 +46,11 @@ server {
     listen ${PORT:-80};
     server_name localhost;
     
-    # 根路径重定向到 /log-lottery/
-    location = / {
-        return 301 /log-lottery/;
-    }
-    
-    # 前端静态文件 - 匹配 /log-lottery/ 路径
-    location /log-lottery/ {
-        alias /usr/share/nginx/html/;
+    # 简化的配置：所有请求都从根目录处理
+    location / {
+        root /usr/share/nginx/html;
         index index.html;
         try_files \$uri \$uri/ /index.html;
-    }
-    
-    # 前端静态资源 - 匹配特定目录
-    location /log-lottery/js/ {
-        alias /usr/share/nginx/html/js/;
-    }
-    
-    location /log-lottery/css/ {
-        alias /usr/share/nginx/html/css/;
-    }
-    
-    location /log-lottery/assets/ {
-        alias /usr/share/nginx/html/assets/;
-    }
-    
-    location /log-lottery/png/ {
-        alias /usr/share/nginx/html/png/;
-    }
-    
-    location /log-lottery/mp3/ {
-        alias /usr/share/nginx/html/mp3/;
-    }
-    
-    location /log-lottery/wav/ {
-        alias /usr/share/nginx/html/wav/;
-    }
-    
-    # 暂时禁用API路由
-    location /log-lottery/api/ {
-        return 404;
-    }
-    
-    # 暂时禁用WebSocket
-    location /log-lottery/ws {
-        return 404;
     }
 }
 EOF

@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, __dirname)
     const chunkName = mode === 'prebuild' ? '[name]' : 'chunk'
     return {
-        base: '/log-lottery/',
+        base: '/',
         plugins: [
             vue(),
             tailwindcss(),
