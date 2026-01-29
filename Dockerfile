@@ -34,13 +34,10 @@ RUN apk add --no-cache socat
 # 复制前端文件
 COPY --from=frontend-builder /usr/src/app/frontend/dist /usr/share/nginx/html
 
-# 复制后端二进制文件
-COPY --from=backend-builder /usr/src/app/ws_server/target/release/ws_server /usr/local/bin/ws_server
+# 暂时跳过后端，只运行前端
+# COPY --from=backend-builder /usr/src/app/ws_server/target/release/ws_server /usr/local/bin/ws_server
 
-# 添加调试信息
-RUN ls -la /usr/local/bin/ && file /usr/local/bin/ws_server || echo "ws_server 文件不存在"
-
-# 创建启动脚本（动态生成Nginx配置）
+# 创建简化的启动脚本，只运行前端
 RUN tee /start.sh > /dev/null <<'EOL'
 #!/bin/sh
 # 动态生成Nginx配置，使用Render的PORT环境变量
@@ -53,38 +50,21 @@ server {
     location / {
         root /usr/share/nginx/html;
         index index.html;
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
     
-    # API 代理到后端
+    # 暂时禁用API路由
     location /api/ {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        return 404;
     }
     
-    # WebSocket 支持
+    # 暂时禁用WebSocket
     location /ws {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        return 404;
     }
 }
 EOF
 
-# 启动后端服务
-if [ -f "/usr/local/bin/ws_server" ]; then
-    /usr/local/bin/ws_server &
-else
-    echo "警告: ws_server 二进制文件不存在，仅启动 Nginx"
-fi
 # 启动 nginx
 nginx -g 'daemon off;'
 EOL
