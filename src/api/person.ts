@@ -8,3 +8,11 @@ export function api_submitPerson(data: IPersonSubmission) {
         data,
     })
 }
+
+export function api_deletePerson(data: { name: string, phone: string }) {
+    return request<{ status: string, message?: string }>({
+        url: '/delete-person',
+        method: 'POST',
+        data,
+    })
+}
