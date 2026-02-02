@@ -6,6 +6,7 @@ import { computed, ref, toRaw } from 'vue'
 import { IndexDb } from '@/utils/dexie'
 import { defaultPersonList } from './data'
 import { usePrizeConfig } from './prizeConfig'
+import { api_deletePerson } from '@/api/person'
 
 // 获取IPersonConfig的key组成数组
 export const personListKey = Object.keys(defaultPersonList[0])
@@ -122,6 +123,13 @@ export const usePersonConfig = defineStore('person', () => {
             )
         }
         personDb.deleteData('alreadyPersonList', person)
+        
+        // 通知后端删除参与人记录
+        if (person.phone && person.name) {
+            api_deletePerson({ name: person.name, phone: person.phone }).catch(err => {
+                console.error('Failed to delete person from backend:', err)
+            })
+        }
     }
     // 删除指定人员
     function deletePerson(person: IPersonConfig) {
@@ -132,10 +140,38 @@ export const usePersonConfig = defineStore('person', () => {
             personConfig.value.alreadyPersonList = alreadyPersonListRaw.filter((item: IPersonConfig) => item.id !== person.id)
             personDb.deleteData('allPersonList', person)
             personDb.deleteData('alreadyPersonList', person)
+            
+            // 通知后端删除参与人记录
+            if (person.phone && person.name) {
+                api_deletePerson({ name: person.name, phone: person.phone }).catch(err => {
+                    console.error('Failed to delete person from backend:', err)
+                })
+            }
         }
     }
     // 删除所有人员
     function deleteAllPerson() {
+        // 保存当前所有人员列表以便通知后端
+        const allPersonsToDelete = [...personConfig.value.allPersonList]
+        const alreadyPersonsToDelete = [...personConfig.value.alreadyPersonList]
+        
+        // 通知后端删除所有记录
+        allPersonsToDelete.forEach((person: IPersonConfig) => {
+            if (person.phone && person.name) {
+                api_deletePerson({ name: person.name, phone: person.phone }).catch(err => {
+                    console.error('Failed to delete person from backend:', err)
+                })
+            }
+        })
+        
+        alreadyPersonsToDelete.forEach((person: IPersonConfig) => {
+            if (person.phone && person.name) {
+                api_deletePerson({ name: person.name, phone: person.phone }).catch(err => {
+                    console.error('Failed to delete person from backend:', err)
+                })
+            }
+        })
+        
         personConfig.value.allPersonList = []
         personConfig.value.alreadyPersonList = []
         personDb.deleteAll('allPersonList')
@@ -152,6 +188,15 @@ export const usePersonConfig = defineStore('person', () => {
     // 重置已中奖人员
     function resetAlreadyPerson() {
         // 把已中奖人员合并到未中奖人员，要验证是否已存在
+        personConfig.value.alreadyPersonList.forEach((person: IPersonConfig) => {
+            // 通知后端删除参与人记录
+            if (person.phone && person.name) {
+                api_deletePerson({ name: person.name, phone: person.phone }).catch(err => {
+                    console.error('Failed to delete person from backend:', err)
+                })
+            }
+        })
+        
         personConfig.value.allPersonList.forEach((item: IPersonConfig) => {
             item.isWin = false
             item.prizeName = []

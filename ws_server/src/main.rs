@@ -32,10 +32,18 @@ struct AppState {
     tx: broadcast::Sender<String>,
     // 已注册手机号集合，用于简单去重
     phones: Mutex<HashSet<String>>,
+    // 已注册姓名集合，用于姓名去重
+    names: Mutex<HashSet<String>>,
 }
 
 #[derive(Deserialize, Debug)]
 struct PersonSubmission {
+    name: String,
+    phone: String,
+}
+
+#[derive(Deserialize, Debug)]
+struct PersonDeletion {
     name: String,
     phone: String,
 }
@@ -65,6 +73,16 @@ async fn submit_person(sub: web::Json<PersonSubmission>, data: web::Data<AppStat
         phones.insert(phone.to_string());
     }
     
+    // 去重 by name
+    {
+        let name = payload.name.trim();
+        let mut names = data.names.lock().unwrap();
+        if names.contains(name) {
+            return HttpResponse::Conflict().json(ApiResponse::<()>::error(409, "姓名已参与抽奖".to_string()));
+        }
+        names.insert(name.to_string());
+    }
+    
     // 构造消息
     let message = format!("{{\"type\":\"new_person\",\"name\":\"{}\",\"phone\":\"{}\"}}", payload.name, payload.phone);
     
@@ -74,6 +92,28 @@ async fn submit_person(sub: web::Json<PersonSubmission>, data: web::Data<AppStat
     
     println!("报名已接收并广播: {} / {}", payload.name, payload.phone);
     HttpResponse::Ok().json(ApiResponse::<()>::ok_without_data("Submitted".to_string()))
+}
+
+#[post("/api/delete-person")]
+async fn delete_person(del: web::Json<PersonDeletion>, data: web::Data<AppState>) -> impl Responder {
+    let payload = &del.0;
+    let phone = payload.phone.trim();
+    let name = payload.name.trim();
+    
+    // 从手机号集合中删除
+    {
+        let mut phones = data.phones.lock().unwrap();
+        phones.remove(phone);
+    }
+    
+    // 从姓名集合中删除
+    {
+        let mut names = data.names.lock().unwrap();
+        names.remove(name);
+    }
+    
+    println!("已删除参与人: {} / {}", payload.name, payload.phone);
+    HttpResponse::Ok().json(ApiResponse::<()>::ok_without_data("Deleted".to_string()))
 }
 
 #[get("/api/ws")]
@@ -141,7 +181,8 @@ async fn main() -> std::io::Result<()> {
     
     let app_state = web::Data::new(AppState { 
         tx, 
-        phones: Mutex::new(HashSet::new()) 
+        phones: Mutex::new(HashSet::new()),
+        names: Mutex::new(HashSet::new()),
     });
     
     HttpServer::new(move || {
@@ -155,6 +196,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(user_msg)
             .service(submit_person)
+            .service(delete_person)
             .service(websocket)
     })
     .bind(("0.0.0.0", 8080))?
