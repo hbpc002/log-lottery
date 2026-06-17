@@ -9,6 +9,7 @@ export const sidebarEn = {
     musicManagement: 'Music Management',
     operatingInstructions: 'Operating Instructions',
     server: 'Server',
+    registerConfig: 'Register Config',
 }
 
 export const sidebarZhCn = {
@@ -22,6 +23,7 @@ export const sidebarZhCn = {
     musicManagement: '音乐管理',
     operatingInstructions: '操作说明',
     server: '服务器',
+    registerConfig: '注册页配置',
 }
 
 export const sidebar = {

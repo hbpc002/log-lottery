@@ -32,6 +32,26 @@ export const useGlobalConfig = defineStore('global', {
                 },
                 musicList: defaultMusicList as IMusic[],
                 imageList: defaultImageList as IImage[],
+                registerPage: {
+                    bgStart: '#6366f1',
+                    bgMid: '#8b5cf6',
+                    bgEnd: '#a78bfa',
+                    cardBgStart: '#f5f3ff',
+                    cardBgEnd: '#ede9fe',
+                    textColor: '#4c1d95',
+                    titleText: '',
+                    promptText: '请填写信息参与抽奖活动',
+                    bottomHint: '填写信息即可参与抽奖活动，祝您好运！',
+                    nameLabel: '姓名',
+                    phoneLabel: '手机号',
+                    namePlaceholder: '请输入您的姓名',
+                    phonePlaceholder: '请输入您的手机号',
+                    buttonText: '立即参与抽奖',
+                    btnBgStart: '#7c3aed',
+                    btnBgEnd: '#a855f7',
+                    successMessage: '参与成功！',
+                    showFireworks: true,
+                },
             },
             currentMusic: {
                 item: defaultMusicList[0] as IMusic,
@@ -134,6 +154,9 @@ export const useGlobalConfig = defineStore('global', {
         // 是否播放获奖音乐
         getWinMusic(state) {
             return state.globalConfig.winMusic
+        },
+        getRegisterPage(state) {
+            return state.globalConfig.registerPage
         },
     },
     actions: {
@@ -284,6 +307,12 @@ export const useGlobalConfig = defineStore('global', {
         setIsPlayWinMusic(winMusic: boolean) {
             this.globalConfig.winMusic = winMusic
         },
+        setRegisterPage(data: any) {
+            this.globalConfig.registerPage = data
+        },
+        setRegisterPageField(field: string, value: any) {
+            (this.globalConfig.registerPage as any)[field] = value
+        },
         // 重置所有配置
         reset() {
             this.globalConfig = {
@@ -312,6 +341,26 @@ export const useGlobalConfig = defineStore('global', {
                 },
                 musicList: defaultMusicList as IMusic[],
                 imageList: defaultImageList as IImage[],
+                registerPage: {
+                    bgStart: '#6366f1',
+                    bgMid: '#8b5cf6',
+                    bgEnd: '#a78bfa',
+                    cardBgStart: '#f5f3ff',
+                    cardBgEnd: '#ede9fe',
+                    textColor: '#4c1d95',
+                    titleText: '',
+                    promptText: '请填写信息参与抽奖活动',
+                    bottomHint: '填写信息即可参与抽奖活动，祝您好运！',
+                    nameLabel: '姓名',
+                    phoneLabel: '手机号',
+                    namePlaceholder: '请输入您的姓名',
+                    phonePlaceholder: '请输入您的手机号',
+                    buttonText: '立即参与抽奖',
+                    btnBgStart: '#7c3aed',
+                    btnBgEnd: '#a855f7',
+                    successMessage: '参与成功！',
+                    showFireworks: true,
+                },
             }
             this.currentMusic = {
                 item: defaultMusicList[0],

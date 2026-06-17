@@ -4,6 +4,7 @@ export const viewTitleEn = {
     prizeManagement: 'Prize Management',
     globalSetting: 'Global Setting',
     operatingInstructions: 'Operating Instructions',
+    registerConfig: 'Register Page Config',
 }
 
 export const viewTitleZhCn = {
@@ -12,6 +13,7 @@ export const viewTitleZhCn = {
     prizeManagement: '奖项配置',
     globalSetting: '全局配置',
     operatingInstructions: '操作说明',
+    registerConfig: '注册页配置',
 }
 
 export const viewTitle = {

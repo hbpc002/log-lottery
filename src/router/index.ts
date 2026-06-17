@@ -99,6 +99,15 @@ export const configRoutes = {
                         icon: 'music',
                     },
                 },
+                {
+                    path: '/log-lottery/config/global/register',
+                    name: 'RegisterConfig',
+                    component: () => import('@/views/Config/Global/RegisterConfig/index.vue'),
+                    meta: {
+                        title: i18n.global.t('sidebar.registerConfig'),
+                        icon: 'register',
+                    },
+                },
             ],
         },
         {

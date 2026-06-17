@@ -48,6 +48,26 @@ export const tableEn = {
     globalFont: 'Global Font',
     titleFont: 'Title Font',
     syncGlobalFont: 'Sync Global Font',
+    // register page config
+    registerConfig: 'Register Page Config',
+    registerBgStart: 'Background Start Color',
+    registerBgMid: 'Background Mid Color',
+    registerBgEnd: 'Background End Color',
+    registerCardBgStart: 'Card Background Start',
+    registerCardBgEnd: 'Card Background End',
+    registerTextColor: 'Text Color',
+    registerTitleText: 'Page Title',
+    registerPromptText: 'Prompt Text',
+    registerBottomHint: 'Bottom Hint',
+    registerNameLabel: 'Name Label',
+    registerPhoneLabel: 'Phone Label',
+    registerNamePlaceholder: 'Name Placeholder',
+    registerPhonePlaceholder: 'Phone Placeholder',
+    registerButtonText: 'Button Text',
+    registerBtnBgStart: 'Button Color Start',
+    registerBtnBgEnd: 'Button Color End',
+    registerSuccessMessage: 'Success Message',
+    registerShowFireworks: 'Show Fireworks',
 }
 
 export const tableZhCn = {
@@ -100,6 +120,26 @@ export const tableZhCn = {
     globalFont: '全局字体',
     titleFont: '标题字体',
     syncGlobalFont: '同步全局字体',
+    // register page config
+    registerConfig: '注册页配置',
+    registerBgStart: '背景渐变起始色',
+    registerBgMid: '背景渐变中间色',
+    registerBgEnd: '背景渐变结束色',
+    registerCardBgStart: '卡片背景起始色',
+    registerCardBgEnd: '卡片背景结束色',
+    registerTextColor: '文字颜色',
+    registerTitleText: '页面标题',
+    registerPromptText: '提示文字',
+    registerBottomHint: '底部提示',
+    registerNameLabel: '姓名标签',
+    registerPhoneLabel: '手机号标签',
+    registerNamePlaceholder: '姓名占位符',
+    registerPhonePlaceholder: '手机号占位符',
+    registerButtonText: '按钮文字',
+    registerBtnBgStart: '按钮颜色起始',
+    registerBtnBgEnd: '按钮颜色结束',
+    registerSuccessMessage: '成功消息',
+    registerShowFireworks: '显示烟花效果',
 }
 
 export const table = {
