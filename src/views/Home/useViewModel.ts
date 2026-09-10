@@ -818,8 +818,9 @@ transform(targets.table, 1000, 'table')
         if (patternList.value.length) {
             for (let i = 0; i < patternList.value.length; i++) {
                 if (i < rowCount.value * 7) {
-                    // 统一红包样式，不再使用随机颜色
-                    objects.value[patternList.value[i] - 1].element.style.background = 'linear-gradient(135deg, #ff4b4b 0%, #e63946 50%, #d62828 100%)'
+                    // 新年主题红包样式，更鲜艳的红色
+                    objects.value[patternList.value[i] - 1].element.style.background = 'linear-gradient(135deg, #e53935 0%, #c62828 50%, #b71c1c 100%)'
+                    objects.value[patternList.value[i] - 1].element.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)'
                 }
             }
         }

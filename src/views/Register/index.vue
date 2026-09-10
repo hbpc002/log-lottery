@@ -243,7 +243,7 @@ onUnmounted(() => {
               v-model="form.name"
               class="w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none bg-white"
               :class="{ 'border-red-400 bg-red-50': errors.name }"
-              :style="[borderColorStyle, focusRingStyle]"
+              :style="[borderColorStyle, focusRingStyle, textColorStyle]"
               :placeholder="registerPage.namePlaceholder"
             >
           </div>
@@ -269,7 +269,7 @@ onUnmounted(() => {
               maxlength="11"
               class="w-full pl-10 pr-4 py-3 border-2 rounded-xl focus:ring-4 transition-all outline-none bg-white"
               :class="{ 'border-red-400 bg-red-50': errors.phone }"
-              :style="[borderColorStyle, focusRingStyle]"
+              :style="[borderColorStyle, focusRingStyle, textColorStyle]"
               :placeholder="registerPage.phonePlaceholder"
             >
           </div>

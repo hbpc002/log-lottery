@@ -47,7 +47,7 @@ function skip(path: string) {
                   <li v-for="subSubItem in subItem.children" :key="subSubItem.name">
                     <a
                       :style="subSubItem.name === route.name ? 'background-color:rgba(12,12,12,0.2)' : ''"
-                      @click="skip(subItem.path)"
+                      @click="skip(subSubItem.path)"
                     >{{
                       subSubItem.meta!.title }}</a>
                   </li>

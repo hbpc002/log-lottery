@@ -21,11 +21,12 @@ export function useElementStyle(props: IUseElementStyle) {
         element.style.background = `linear-gradient(135deg, ${rgba(patternColor, 0.9)} 0%, ${rgba(patternColor, 0.7)} 50%, ${rgba(patternColor, 0.8)} 100%)`
     }
     else if (mod === 'sphere' || mod === 'default') {
-        // 统一使用红包样式，忽略随机性
-        element.style.background = 'linear-gradient(135deg, #ff4b4b 0%, #e63946 50%, #d62828 100%)'
+        // 新年主题红色卡片
+        element.style.background = 'linear-gradient(135deg, #e53935 0%, #c62828 50%, #b71c1c 100%)'
     }
     else if (mod === 'lucky') {
-        element.style.backgroundColor = rgba(cardColor, 0.8)
+        // 中奖卡片使用金色渐变，更符合新年主题
+        element.style.background = 'linear-gradient(135deg, #ffd54f 0%, #ffb300 50%, #ff8f00 100%)'
     }
     element.style.border = `1px solid ${rgba(cardColor, 0.25)}`
     element.style.boxShadow = `0 8px 16px rgba(214, 40, 40, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)`

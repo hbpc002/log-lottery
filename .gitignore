@@ -134,3 +134,5 @@ dist-file
 .yarn/install-state.gz
 .pnp.*
 target
+# Core dumps
+core.*
